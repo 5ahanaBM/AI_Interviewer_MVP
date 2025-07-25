@@ -1,6 +1,6 @@
 # AI Interviewer
 
-An AI-powered interview assistant that analyzes resumes, generates contextual technical questions, and conducts conversational mock interviews with feedback.
+An AI powered interview assistant that analyzes resumes, generates contextual technical questions, and conducts conversational mock interviews with feedback.
 
 ---
 
