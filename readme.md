@@ -117,7 +117,7 @@ Frontend should now be available on `http://localhost:5173`.
 
 ---
 
-## 🔍 Demo Screens
+## Demo Screens
 
 ### Resume Upload
 ![Upload](frontend/public/screenshots/ResumeUploadPage.png)
