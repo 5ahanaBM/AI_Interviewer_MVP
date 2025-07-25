@@ -179,3 +179,4 @@ Frontend should now be available on `http://localhost:5173`.
     * Multi-dimensional scoring (correctness, completeness, communication, confidence)
 * Persistent user sessions and history
 * Periodic question refresh or rotation via LLM
+* Prompts can be isolated and modularised for easier modifications
