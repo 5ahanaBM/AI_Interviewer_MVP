@@ -1,0 +1,32 @@
+[
+  {
+    "question": "What are Python decorators and how do they work?",
+    "tags": ["Python"],
+    "difficulty": "Intermediate"
+  },
+  {
+    "question": "Explain how a transformer architecture works.",
+    "tags": ["Machine Learning", "NLP", "Transformers"],
+    "difficulty": "Advanced"
+  },
+  {
+    "question": "How do you optimize Lambda functions in AWS?",
+    "tags": ["AWS", "Cloud"],
+    "difficulty": "Intermediate"
+  },
+  {
+    "question": "What is the difference between REST and GraphQL?",
+    "tags": ["API Development"],
+    "difficulty": "Basic"
+  },
+  {
+    "question": "Explain FAISS and its use in information retrieval.",
+    "tags": ["Vector DB", "RAG"],
+    "difficulty": "Advanced"
+  },
+  {
+    "question": "How do you fine-tune a model using Hugging Face Transformers?",
+    "tags": ["Hugging Face", "Transformers"],
+    "difficulty": "Advanced"
+  }
+]
