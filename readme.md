@@ -1,6 +1,6 @@
 # AI Interviewer
 
-An AI powered interview assistant that analyzes resumes, generates contextual technical questions, and conducts conversational mock interviews with feedback.
+This project is an AI powered interviewer web application that utilizes Retrieval Augmented Generation (RAG) to conduct contextual technical interviews based on a candidate's resume. It supports resume uploads, dynamically generates relevant questions, and concludes with a personalized performance summary.
 
 ---
 
@@ -82,38 +82,64 @@ Frontend should now be available on `http://localhost:5173`.
 
 ### Resume Upload
 
-* Supports PDF and text files
-* Extracts skills using OpenAI's LLM (chat API) for structured info
-
-### Question Generation
-
-* Vector similarity search on technical questions using FAISS
-* Conversational phrasing via OpenAI chat completion API
-* Follow up questions dynamically generated based on user's last answer
+* Supports PDF and DOC formats.
+* Allows optional user input for job title or job description.
+* Skills and experience are extracted using OpenAI's LLM via structured prompts.
 
 ### Interview Flow
 
-* Starts with a greeting, waits for candidate readiness
-* Asks a base question followed by a follow-up
-* Concludes with a score summary and LLM generated feedback
+* The AI begins with a greeting and waits for the candidate to confirm readiness.
+* A base question is asked, followed by a follow-up question.
+* Questions are conversational and adapted to the user’s resume and job title/description.
+* The flow comprises of 6 questions (configurable via backend).
 
-### Summary & Feedback
+### Chat UI
 
-* Total questions and follow-ups shown
-* Skills inferred from session tagged
-* Personalized feedback and scoring using an LLM based on entire chat history
+* Multi line input box for user responses with a helpful placeholder.
+* Chat window automatically scrolls to the latest message.
+* Clean, UI with native React state management.
+
+### Question Generation
+
+* Base questions are retrieved from a `questions.json` file.
+* Each question is rephrased to be friendly using the chat completion API.
+* Follow-up questions are generated using context from the base question and the user's answer.
+* Job-aware prompting: if a job title or description is present, prompts are tailored accordingly.
+
+#### Question Retrieval Strategy
+* Initially, a generic FAISS `similarity_search_with_score()` method was implemented to search for questions by raw query string. However, this was replaced by a more robust method: `select_relevant_questions(skills)`, which embeds extracted skills from the resume and queries FAISS for aligned questions.
+* This skill-anchored retrieval ensures diversity, precision, and stronger relevance than free-text query matching.
+
+### Interview Summary
+
+* Once all questions are answered, the LLM reviews the full Q\&A transcript.
+* The summary includes:
+  * Total questions asked
+  * Number of follow-up questions
+  * Skills inferred
+  * Overall feedback with critical analysis
+  * Category-wise scoring (e.g., technical depth, communication, completeness)
 
 ---
 
 ## Design Decisions
 
-* **LLM Driven Parsing**: Skill and experience extraction is performed via structured prompts to an OpenAI chat model, which returns JSON. This allows for flexible and accurate parsing without relying on regex or classical NLP pipelines.
-* **Modular Prompting**: Prompt creation is abstracted so question generation and feedback remain adaptable.
-* **Minimal External Dependencies**: No heavy resume parsing libraries used beyond PDF text extraction (PyMuPDF).
-* **FAISS**: Fast and lightweight vector retrieval without requiring external DBs.
-* **Session based State**: Each chat session is handled in-memory; suitable for demo-scale interviews.
-* **Frontend Simplicity**: ChatBox uses native React state for simplicity; no Redux or heavy state mgmt.
-* **UI Enhancements**: Enlarged and centered chat window for better laptop experience, multiline input box for comfortable answering, auto-scroll to latest message, and clean layout using native styling.
+* **LLM-Driven Parsing**: OpenAI chat model is used for extracting structured skills and experiences.
+* **Prompt Modularity**: Prompt creation is centralized and adjustable.
+* **No Heavy Dependencies**: No third-party resume parsing libraries beyond PyMuPDF.
+* **FAISS**: Used for vector-based question retrieval, keeping the solution lightweight and local.
+* **In memory Session State**: Suitable for demo scale interviews; sessions are not persisted.
+* **React Frontend**: Native state without Redux to keep UI interactions fast and simple
+
+---
+
+## Enhancements Implemented
+
+* Job-aware prompt logic in backend
+* Improved LLM prompt chaining for follow-ups and summaries
+* Multi-line chat input with placeholder text
+* Auto-scroll on new messages
+* Category-level scoring in feedback summary
 
 ---
 
@@ -123,12 +149,14 @@ Frontend should now be available on `http://localhost:5173`.
 ![Upload](frontend/public/screenshots/ResumeUploadPage.png)
 
 ### Chat with AI Interviewer
+![Greeting](frontend/public/screenshots/AIGreetingMessage.png)
 ![Chat](frontend/public/screenshots/ChatwithFollowupQuestions1.png)
 ![Chat](frontend/public/screenshots/ChatwithFollowupQuestions2.png)
 ![Chat](frontend/public/screenshots/ChatwithFollowupQuestions3.png)
 
 ### Interview Summary
 ![Summary](frontend/public/screenshots/FinalInterviewSummaryReport.png)
+
 
 ## Trade offs
 
@@ -142,8 +170,12 @@ Frontend should now be available on `http://localhost:5173`.
 
 ## Future Improvements
 
-* Role specific interview paths
-* Admin view with candidate analytics
-* Configurable interview length/difficulty
-* Audio/video integration for realism
-* Better feedback rubric using rubric chaining
+* Dynamic question generation without `questions.json`
+* Role-specific interview paths
+* Configurable interview length and difficulty
+* Audio/video interaction support
+* Admin dashboard for analytics and question uploads
+* Advanced rubric chaining for better evaluation
+    * Multi-dimensional scoring (correctness, completeness, communication, confidence)
+* Persistent user sessions and history
+* Periodic question refresh or rotation via LLM
