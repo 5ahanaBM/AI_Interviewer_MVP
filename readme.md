@@ -117,6 +117,19 @@ Frontend should now be available on `http://localhost:5173`.
 
 ---
 
+## 🔍 Demo Screens
+
+### Resume Upload
+![Upload](frontend/public/screenshots/ResumeUploadPage.png)
+
+### Chat with AI Interviewer
+![Chat](frontend/public/screenshots/ChatwithFollowupQuestions1.png)
+![Chat](frontend/public/screenshots/ChatwithFollowupQuestions2.png)
+![Chat](frontend/public/screenshots/ChatwithFollowupQuestions3.png)
+
+### Interview Summary
+![Summary](frontend/public/screenshots/FinalInterviewSummaryReport.png)
+
 ## Trade-offs
 
 * LLM-based parsing offers richer context understanding but may occasionally hallucinate or misformat JSON.
