@@ -11,7 +11,7 @@ function App() {
   const [showReport, setShowReport] = useState(false);
   const [summaryData, setSummaryData] = useState(null);
 
-  const handleResumeUpload = async (file) => {
+  const handleResumeUpload = async (file, jobTitle) => {
     try {
       const result = await uploadResume(file);
       console.log("Resume upload result:", result);
@@ -25,7 +25,7 @@ function App() {
       const newSessionId = "sess_" + Date.now();
       setSessionId(newSessionId);
 
-      const sessionStart = await startSession(newSessionId, info.skills);
+      const sessionStart = await startSession(newSessionId, info.skills, jobTitle);
       const greetingMessage = { from: "ai", message: sessionStart.prompt };
 
       setInitialMessages([greetingMessage]);
@@ -66,9 +66,6 @@ function App() {
       };
     }
   };
-
-
-  console.log("Showing report:", showReport, summaryData);
 
   return (
     <div style={{ padding: "20px", fontFamily: "Arial, sans-serif" }}>

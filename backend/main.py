@@ -118,11 +118,13 @@ def chat_question(payload: dict):
     """
     q = payload.get("question", "")
     prev = payload.get("previous_answer", "")
+    job_title = payload.get("job_title", "")
+
 
     if not q:
         return {"error": "Missing base question"}
 
-    conversational = generate_conversational_question(q, prev)
+    conversational = generate_conversational_question(q, prev, job_title)
     return {"chat_question": conversational}
 
 @app.post("/start_session")
@@ -132,10 +134,11 @@ def start_session(payload: dict):
     """
     session_id = payload.get("session_id")
     skills = payload.get("skills", [])
+    job_title = payload.get("job_title", "")
     if not session_id or not skills:
         return {"error": "session_id and skills are required"}
 
-    session = ChatSession(skills=skills, vector_store=vector_store)
+    session = ChatSession(skills=skills, vector_store=vector_store, job_title=job_title)
     active_sessions[session_id] = session
     first_prompt = session.get_next_prompt()
     return {"prompt": first_prompt}

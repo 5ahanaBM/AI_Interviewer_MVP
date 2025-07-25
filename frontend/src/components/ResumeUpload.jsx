@@ -1,29 +1,40 @@
-import React, { useState } from "react";
+import { useState } from "react";
 
 export default function ResumeUpload({ onResumeParsed }) {
-  const [selectedFile, setSelectedFile] = useState(null);
+  const [file, setFile] = useState(null);
+  const [jobTitle, setJobTitle] = useState("");
 
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setSelectedFile(file);
-    }
-  };
+  const handleChange = (e) => setFile(e.target.files[0]);
 
-  const handleStartClick = () => {
-    if (!selectedFile) {
-      alert("Please choose a resume file first.");
+  const handleUpload = () => {
+    if (!file) {
+      alert("Please select a resume file.");
       return;
     }
-    onResumeParsed(selectedFile); // delegate to parent (App.jsx)
+    onResumeParsed(file, jobTitle);
   };
 
   return (
-    <div>
-      <label>Upload Resume:</label>
-      <input type="file" accept=".pdf" onChange={handleFileChange} />
+    <div style={{ maxWidth: "500px", margin: "0 auto", textAlign: "center" }}>
+      <h3>Upload Your Resume</h3>
+      <p>PDF and doc formats are supported.</p>
+
+      <input type="file" accept=".pdf,.txt" onChange={handleChange} />
       <br /><br />
-      <button onClick={handleStartClick}>Let’s Get Started</button>
+
+      <label htmlFor="jobTitle"><strong>Target Job Title / Description (optional)</strong></label>
+      <br />
+      <input
+        type="text"
+        id="jobTitle"
+        placeholder="e.g. ML Engineer, Frontend Developer"
+        value={jobTitle}
+        onChange={(e) => setJobTitle(e.target.value)}
+        style={{ width: "100%", marginTop: "8px", padding: "8px" }}
+      />
+      <br /><br />
+
+      <button onClick={handleUpload}>Let's Get Started</button>
     </div>
   );
 }

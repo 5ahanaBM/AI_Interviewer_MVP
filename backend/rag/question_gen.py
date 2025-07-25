@@ -18,12 +18,16 @@ class QuestionSelector:
     def __init__(self, vector_store: QuestionVectorStore):
         self.vector_store = vector_store
 
-    def select_relevant_questions(self, skills: List[str], top_k_per_skill: int = 2) -> List[Tuple[str, dict]]:
+    def select_relevant_questions(
+        self, skills: List[str], job_title: str = "", top_k_per_skill: int = 2
+    ) -> List[Tuple[str, dict]]:
         """
         Retrieves top-k FAISS matches per skill and deduplicates them.
+        If job_title is provided, it is prepended to each skill query to improve relevance.
 
         Args:
             skills (List[str]): List of resume keywords or skills.
+            job_title (str): Optional job role or description to bias retrieval.
             top_k_per_skill (int): Number of questions to fetch per skill.
 
         Returns:
@@ -33,7 +37,10 @@ class QuestionSelector:
         shortlisted = []
 
         for skill in skills:
-            matches = self.vector_store.search(skill, k=top_k_per_skill)
+            # Build contextualized query
+            query = f"{job_title}, {skill}" if job_title else skill
+            matches = self.vector_store.search(query, k=top_k_per_skill)
+
             for question, metadata in matches:
                 if question not in seen:
                     seen.add(question)
@@ -41,28 +48,27 @@ class QuestionSelector:
 
         return shortlisted[:10]  # Limit to 10 questions max
 
+# def generate_conversational_prompt(base_question: str, prev_answer: str = "") -> str:
+#     """
+#     Builds a prompt to turn a base question into a conversational or follow-up version.
 
-def generate_conversational_prompt(base_question: str, prev_answer: str = "") -> str:
-    """
-    Builds a prompt to turn a base question into a conversational or follow-up version.
+#     Args:
+#         base_question (str): The original static technical question.
+#         prev_answer (str): Optional candidate answer to generate follow-up.
 
-    Args:
-        base_question (str): The original static technical question.
-        prev_answer (str): Optional candidate answer to generate follow-up.
-
-    Returns:
-        str: Prompt string for the LLM.
-    """
-    if prev_answer:
-        return (
-            f"You are an AI interviewer. The candidate answered: '{prev_answer}'. "
-            f"Ask a logical follow-up question based on this answer."
-        )
-    else:
-        return (
-            f"Rephrase the following technical interview question into a more conversational, friendly tone:\n"
-            f"'{base_question}'"
-        )
+#     Returns:
+#         str: Prompt string for the LLM.
+#     """
+#     if prev_answer:
+#         return (
+#             f"You are an AI interviewer. The candidate answered: '{prev_answer}'. "
+#             f"Ask a logical follow-up question based on this answer."
+#         )
+#     else:
+#         return (
+#             f"Rephrase the following technical interview question into a more conversational, friendly tone:\n"
+#             f"'{base_question}'"
+#         )
 
 # def generate_conversational_question(base_question: str, prev_answer: str = "") -> str:
 #     """
@@ -87,31 +93,54 @@ def generate_conversational_prompt(base_question: str, prev_answer: str = "") ->
 #         print("OpenAI API error:", e)
 #         return base_question
 
-def generate_conversational_question(base_question: str, user_answer: str = "") -> str:
+def generate_conversational_question(base_question: str, prev_answer: str = "",  job_title: str = ""
+) -> str:
     """
     Uses OpenAI's chat model to convert a base technical question into:
     - A friendly style if no answer is given
-    - A follow-up question if a candidate answer is provided
+    - A role-aware follow-up if an answer is provided
+
+    Args:
+        base_question (str): Original technical question
+        prev_answer (str): Optional user answer (for follow-ups)
+        job_title (str): Optional context for job role or description
+
+    Returns:
+        str: A conversational version of the question or thoughtful follow-up
     """
-    if not user_answer:
-        prompt = f"Rephrase the following technical interview question into a more conversational, friendly tone:\n'{base_question}'"
+    # Prepare role/desc context
+    role_context = ""
+    if job_title:
+        role_context = (
+            f"You are interviewing a candidate for the role of: {job_title.strip()}.\n"
+        )
+
+    if not prev_answer:
+        # Base question
+        prompt = (
+            f"{role_context}"
+            f"Rephrase the following technical interview question into a more conversational and friendly tone:\n"
+            f"'{base_question}'"
+        )
         messages = [{"role": "user", "content": prompt}]
     else:
+        # Follow-up question
         system_msg = (
-            "You are a senior technical interviewer evaluating a software engineering candidate.\n"
+            f"You are a senior technical interviewer evaluating a candidate.\n"
+            f"{role_context}"
             f"You just asked them: \"{base_question}\"\n"
-            f"The candidate answered: \"{user_answer}\"\n\n"
+            f"The candidate answered: \"{prev_answer}\"\n\n"
             "Your job is to ask a thoughtful follow-up question. Focus on:\n"
             "- Depth (ask for examples, use cases, edge cases, etc.)\n"
             "- Clarity (probe vague or generic responses)\n"
             "- Real-world relevance (tie it to industry patterns or practical tasks)\n\n"
-            "You should not repeat the base question. Do not praise or critique the answer — just follow up with a new, intelligent question.\n"
+            "Do not repeat the original question. Avoid praise or critique — just follow up with a smart question.\n"
             "Your response should be 1–2 sentences maximum."
         )
         user_msg = {
             "role": "user",
             "content": (
-                f"The candidate answered: \"{user_answer}\" to the question \"{base_question}\". "
+                f"The candidate answered: \"{prev_answer}\" to the question \"{base_question}\". "
                 "Ask a logical, thoughtful follow-up question as a senior technical interviewer."
             )
         }
@@ -126,7 +155,7 @@ def generate_conversational_question(base_question: str, user_answer: str = "") 
         return response.choices[0].message.content.strip()
     except Exception as e:
         print("OpenAI API error:", e)
-        return base_question if not user_answer else f"Can you elaborate more on your answer about: {base_question}?"
+        return base_question if not prev_answer else f"Can you elaborate on your answer to: {base_question}?"
 
 def is_user_ready_to_start(user_input: str) -> bool:
     """
@@ -156,30 +185,31 @@ def is_user_ready_to_start(user_input: str) -> bool:
         print("OpenAI API error during readiness check:", e)
         return False
 
-def generate_feedback_from_history(chat_history) -> str:
+def generate_feedback_from_history(chat_history, tagged_questions=None) -> dict:
     """
-    Uses OpenAI to generate personalized feedback based on the chat history.
+    Uses OpenAI to generate structured, fair feedback based on chat history.
+    Includes score and feedback per category if metadata is passed.
     """
     from openai import OpenAI
     client = OpenAI()
-    print(f"Chat history for feedback:\n {chat_history}\n\n")
+
     transcript = "\n".join([f"Q: {q}\nA: {a}" for q, a in chat_history])
-    print(f"Transcript for feedback:\n {transcript}\n\n")
-    
+
     prompt = (
-        "You are a senior technical interviewer evaluating a mock technical interview.\n\n"
-        f"Transcript:\n{transcript}\n\n"
-        "Please evaluate the candidate's performance based only on the actual answers.\n"
-        "Do NOT assume correctness — treat vague, incorrect, or nonsensical answers as poor performance.\n"
-        "Be fair but critical.\n\n"
-        "1. Strengths: What did the candidate do well?\n"
-        "2. Weaknesses: Where did they struggle or provide incorrect/vague answers?\n"
-        "3. Communication: How clearly and confidently did they explain their answers?\n"
-        "4. Score: Give a score out of 5 for overall technical performance. Use decimal points if needed.\n\n"
-        "Respond in this JSON format:\n"
+        "You are a senior technical interviewer evaluating a candidate based on the following transcript:\n\n"
+        f"{transcript}\n\n"
+        "Evaluation Rules:\n"
+        "- Treat answers with less than 5 words as weak or vague.\n"
+        "- Short, irrelevant, or placeholder answers (like 'abc', 'idk', 'not sure') should receive low scores.\n"
+        "- Score each skill category mentioned in the questions (e.g., Python, NLP) based on the strength of the candidate's answer.\n\n"
+        "Your response MUST be in this JSON format:\n"
         "{\n"
-        '  "feedback": "<summary>",\n'
-        '  "score": <number between 0 and 5>\n'
+        '  "feedback": "<overall feedback summary>",\n'
+        '  "score": <number between 0 and 5>,\n'
+        '  "categories": {\n'
+        '    "Python": 4.5,\n'
+        '    "ML": 3.0\n'
+        "  }\n"
         "}"
     )
 
@@ -193,7 +223,50 @@ def generate_feedback_from_history(chat_history) -> str:
         return json.loads(output)
     except Exception as e:
         print("OpenAI feedback generation failed:", e)
-        return "Feedback could not be generated due to an internal error."
+        return {
+            "feedback": "Could not generate feedback.",
+            "score": 0,
+            "categories": {}
+        }
+
+# def generate_feedback_from_history(chat_history) -> str:
+#     """
+#     Uses OpenAI to generate personalized feedback based on the chat history.
+#     """
+#     from openai import OpenAI
+#     client = OpenAI()
+#     print(f"Chat history for feedback:\n {chat_history}\n\n")
+#     transcript = "\n".join([f"Q: {q}\nA: {a}" for q, a in chat_history])
+#     print(f"Transcript for feedback:\n {transcript}\n\n")
+    
+#     prompt = (
+#         "You are a senior technical interviewer evaluating a mock technical interview.\n\n"
+#         f"Transcript:\n{transcript}\n\n"
+#         "Please evaluate the candidate's performance based only on the actual answers.\n"
+#         "Do NOT assume correctness — treat vague, incorrect, or nonsensical answers as poor performance.\n"
+#         "Be fair but critical.\n\n"
+#         "1. Strengths: What did the candidate do well?\n"
+#         "2. Weaknesses: Where did they struggle or provide incorrect/vague answers?\n"
+#         "3. Communication: How clearly and confidently did they explain their answers?\n"
+#         "4. Score: Give a score out of 5 for overall technical performance. Use decimal points if needed.\n\n"
+#         "Respond in this JSON format:\n"
+#         "{\n"
+#         '  "feedback": "<summary>",\n'
+#         '  "score": <number between 0 and 5>\n'
+#         "}"
+#     )
+
+#     try:
+#         response = client.chat.completions.create(
+#             model="gpt-3.5-turbo",
+#             messages=[{"role": "user", "content": prompt}],
+#             temperature=0.4,
+#         )
+#         output = response.choices[0].message.content.strip()
+#         return json.loads(output)
+#     except Exception as e:
+#         print("OpenAI feedback generation failed:", e)
+#         return "Feedback could not be generated due to an internal error."
 
 # def generate_feedback_via_llm(chat_history, skills):
 #     """

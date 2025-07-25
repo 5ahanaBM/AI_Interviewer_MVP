@@ -9,7 +9,7 @@ export const uploadResume = async (file) => {
   return response.data;
 };
 
-export const startSession = async (sessionId, skills) => {
+export async function startSession(sessionId, skills, job_title = "") {
   const response = await axios.post(`${BASE_URL}/start_session`, {
     session_id: sessionId,
     skills: skills,

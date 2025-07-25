@@ -9,9 +9,10 @@ class ChatSession:
     Manages a single interview session state.
     """
 
-    def __init__(self, skills: List[str], vector_store: QuestionVectorStore):
+    def __init__(self, skills: List[str], vector_store: QuestionVectorStore, job_title: str = ""):
         selector = QuestionSelector(vector_store)
-        self.questions = selector.select_relevant_questions(skills)
+        self.job_title = job_title
+        self.questions = selector.select_relevant_questions(skills, job_title=job_title)
         self.current_index = 0
         self.followup_done = False
         self.chat_history: List[Tuple[str, str]] = []
@@ -48,7 +49,7 @@ class ChatSession:
                 self.last_question = base_q
                 self.followup_done = True
                 self.total_turns += 1
-                return ["Great! Let’s get started.", generate_conversational_question(base_q)]
+                return ["Great! Let’s get started.", generate_conversational_question(base_question=base_q, job_title=self.job_title)]
             else:
                 return "No worries — just let me know when you’re ready to begin."
 
@@ -64,7 +65,7 @@ class ChatSession:
                     "message": "Interview complete.",
                     "summary": self.generate_summary()
                 }
-            followup = generate_conversational_question(self.last_question, self.last_answer)
+            followup = generate_conversational_question(self.last_question, self.last_answer, self.job_title)
             self.followup_done = False
             self.current_index += 1
             self.total_turns += 1
@@ -81,7 +82,7 @@ class ChatSession:
             self.last_question = base_q
             self.followup_done = True
             self.total_turns += 1
-            return generate_conversational_question(base_q)
+            return generate_conversational_question(base_q, job_title=self.job_title)
 
         # Fallback
         return {
@@ -110,7 +111,8 @@ class ChatSession:
             "followups": followups,
             "skills": asked_skills,
             "feedback": feedback_obj.get("feedback", ""),
-            "score": feedback_obj.get("score", 0)
+            "score": feedback_obj.get("score", 0),
+            "category_scores": feedback_obj.get("categories", {})
         }
 
     def is_finished(self) -> bool:
